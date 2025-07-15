@@ -61,23 +61,19 @@ main {
 }
 
 @keyframes error {
-
   10%,
   90% {
     transform: rotateY(-180deg) translateX(-1px);
   }
-
   20%,
   80% {
     transform: rotateY(-180deg) translateX(2px);
   }
-
   30%,
   50%,
   70% {
     transform: rotateY(-180deg) translateX(-4px);
   }
-
   40%,
   60% {
     transform: rotateY(-180deg) translateX(4px);
