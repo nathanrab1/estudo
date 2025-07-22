@@ -24,6 +24,10 @@ const sketch = ({ context, width, height }) => {
     agents.push(new Agent(x,y));
 
   }
+
+  for (let i = 0; i < 40; i ++) {
+    console.log(agents[i]);
+  }
  
   return ({ context, width, height }) => {
     context.fillStyle = 'white';
