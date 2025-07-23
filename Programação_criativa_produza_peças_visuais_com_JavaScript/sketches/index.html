@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Canvas Sketch com Sliders</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            width: 80%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="controls">
+        <label>Colunas: <input id="cols" type="range" min="2" max="100" value="20"></label><br>
+        <label>Linhas: <input id="rows" type="range" min="2" max="100" value="20"></label><br>
+        <label>Largura da linha: <input id="lineWidth" type="range" min="1" max="10" value="3"></label><br>
+        <label>Frequência do ruído: <input id="freq" type="range" min="0.0001" max="0.01" step="0.0001"
+                value="0.001"></label><br>
+        <label>Velocidade: <input id="speed" type="range" min="1" max="50" value="10"></label>
+    </div>
+
+    <script src="sketch.js" type="module"></script>
+</body>
+
+</html>
