@@ -85,10 +85,12 @@ createSlider('rows', 'Linhas', 2, 100, 20);
 createSlider('freq', 'Frequência', -0.01, 0.01, 0.001, 0.0001);
 createSlider('amp', 'Amplitude', 0, 1, 0.2, 0.01);
 createSlider('speed', 'Velocidade', 1, 100, 10);
-createSlider('margem', 'Margem %', 0, 0.4, 0.05, 0.01);
+// createSlider('margem', 'Margem %', 0, 0.4, 0.05, 0.01);
 createSlider('scaleMin', 'Escala min', 1, 100, 1);
 createSlider('scaleMax', 'Escala max', 1, 100, 30);
 createDropdown('lineCap', 'Ponta da Linha', ['butt', 'round', 'square'], 'round');
+createDropdown('cores', 'Cores', ['colorido', 'rb', 'pb'], 'rb');
+createSlider('fundo', 'Fundo', 0, 255, 30);
 
 const settings = {
   dimensions: [1080, 1080],
@@ -101,18 +103,23 @@ const sketch = () => {
     const rows = parseInt(document.getElementById('rows').value);
     const freq = parseFloat(document.getElementById('freq').value);
     const speed = parseFloat(document.getElementById('speed').value);
-    const margem = parseFloat(document.getElementById('margem').value);
+    const margem = 0.05;
     const scaleMin = parseFloat(document.getElementById('scaleMin').value);
     const scaleMax = parseFloat(document.getElementById('scaleMax').value);
     const amp = parseFloat(document.getElementById('amp').value);
+    const fundo = parseFloat(document.getElementById('fundo').value);
     const lineCap = document.getElementById('lineCap').value;
+    const cores = document.getElementById('cores').value;
 
-    context.fillStyle = 'white';
+    // context.fillStyle = 'black';
+
+    context.fillStyle = `rgb(${fundo}, ${fundo}, ${fundo})`;
+
     context.fillRect(0, 0, width, height);
 
     const numCells = cols * rows;
-    const gridw = width * (1 - 2 * margem);
-    const gridh = height * (1 - 2 * margem);
+    const gridw = width * (1 - 2 * 0.05);
+    const gridh = height * (1 - 2 * 0.05);
     const cellw = gridw / cols;
     const cellh = gridh / rows;
     const margx = width * margem;
@@ -128,13 +135,28 @@ const sketch = () => {
 
       const n = random.noise3D(x, y, frame * speed, freq);
       const angle = n * Math.PI * amp;
-      const scale = math.mapRange(n, -1, 1, scaleMin, scaleMax);
+      const hue = math.mapRange(n, -1, 1, 0, 360);
+      const red = math.mapRange(n, -1, 1, 0, 255);
+      const blue = 255 - red
+      const scale = math.mapRange(n, -1, 1, scaleMin, scaleMax); // <-- ESTA LINHA FALTAVA
 
       context.save();
       context.translate(x + margx + cellw * 0.5, y + margy + cellh * 0.5);
       context.rotate(angle);
       context.lineWidth = scale;
       context.lineCap = lineCap;
+
+      if(cores === "rb"){
+        context.strokeStyle = `rgb(${red}, 0, ${blue})`;
+      }
+      if(cores === "colorido"){
+        context.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      }
+        if(cores === "pb"){
+        context.strokeStyle = "white";
+      }
+
+      
 
       context.beginPath();
       context.moveTo(-w * 0.5, 0);
