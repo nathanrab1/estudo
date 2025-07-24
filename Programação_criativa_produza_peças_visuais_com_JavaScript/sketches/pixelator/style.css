@@ -3,6 +3,8 @@ body {
     padding: 0;
     font-family: sans-serif;
     background: #fff;
+    overflow-y: auto;
+    /* permite rolagem */
 }
 
 .input-container {
@@ -10,7 +12,6 @@ body {
     flex-wrap: wrap;
     gap: 12px;
     padding: 20px;
-    margin-bottom: 50px;
     justify-content: center;
     align-items: center;
     background: rgba(255, 255, 255, 0.95);
@@ -49,10 +50,10 @@ body {
     margin-right: 4px;
 }
 
-canvas {
+canvas.canvas-output {
     display: block;
     margin: 300px auto 40px auto;
-    /* espaço para o painel no topo */
+    /* margem extra no topo para não ficar atrás do painel */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     max-width: 95%;
     height: auto;
