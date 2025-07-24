@@ -1,96 +1,59 @@
 body {
     margin: 0;
+    padding: 0;
     font-family: sans-serif;
-    background: #f0f0f0;
-    overflow-x: hidden;
+    background: #fff;
 }
 
 .input-container {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    padding: 10px 16px;
+    padding: 20px;
+    margin-bottom: 50px;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .image-input,
 .number-input,
-.dropdown-select,
-.slider-input {
-    padding: 6px 10px;
+.slider-input,
+.dropdown-select {
+    padding: 5px 10px;
     font-size: 14px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    outline: none;
-    min-width: 60px;
-}
-
-.image-input {
-    flex: 1 1 200px;
-    max-width: 300px;
+    max-width: 100px;
 }
 
 .load-button {
-    padding: 6px 12px;
+    padding: 5px 15px;
     font-size: 14px;
-    background-color: #007acc;
-    color: white;
-    border: none;
-    border-radius: 6px;
     cursor: pointer;
-    transition: background 0.2s;
-}
-
-.load-button:hover {
-    background-color: #005fa3;
 }
 
 .slider-wrapper {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    min-width: 140px;
+    align-items: center;
+    gap: 8px;
 }
 
 .slider-label {
-    font-size: 13px;
-    margin-bottom: 4px;
-    font-weight: bold;
-}
-
-.slider-input {
-    width: 100%;
-}
-
-.dropdown-label {
-    font-size: 13px;
+    font-size: 14px;
     margin-right: 4px;
 }
 
-@media (max-width: 600px) {
-    .slider-wrapper {
-        min-width: 100%;
-    }
-
-    .input-container {
-        padding: 8px;
-        gap: 10px;
-    }
-
-    .image-input,
-    .load-button,
-    .number-input,
-    .dropdown-select {
-        font-size: 13px;
-    }
-
-    .load-button {
-        padding: 5px 10px;
-    }
-
-    .slider-label {
-        font-size: 12px;
-    }
+canvas {
+    display: block;
+    margin: 300px auto 40px auto;
+    /* espaço para o painel no topo */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 95%;
+    height: auto;
 }

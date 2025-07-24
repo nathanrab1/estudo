@@ -3,6 +3,7 @@ import canvasSketch from 'canvas-sketch';
 let cell = 10;
 let radius = 5;
 let shape = 'circle';
+let bgValue = 255;
 let loadedImage = null;
 let manager = null;
 
@@ -16,67 +17,52 @@ const settings = {
 const typeCanvas = document.createElement('canvas');
 const typeContext = typeCanvas.getContext('2d');
 
-// Importa o CSS
+// Cria e injeta o CSS externo
 const link = document.createElement('link');
 link.rel = 'stylesheet';
 link.href = './style.css';
 document.head.appendChild(link);
 
-// Cria o container de interface
+// Cria o painel de interface
 const container = document.createElement('div');
 container.className = 'input-container';
-container.style.position = 'fixed';
-container.style.top = '0';
-container.style.left = '0';
-container.style.right = '0';
-container.style.zIndex = '10';
-container.style.background = 'rgba(255, 255, 255, 0.95)';
-container.style.backdropFilter = 'blur(8px)';
-container.style.display = 'flex';
-container.style.flexWrap = 'wrap';
-container.style.gap = '10px';
-container.style.padding = '10px';
-container.style.justifyContent = 'center';
 
-// Campo de URL da imagem
+// Input de URL
 const input = document.createElement('input');
 input.type = 'text';
 input.value = 'https://picsum.photos/200/200';
 input.placeholder = 'Cole a URL da imagem aqui...';
 input.className = 'image-input';
-input.style.flex = '1 1 300px';
+container.appendChild(input);
 
 // Botão de carregar imagem
 const button = document.createElement('button');
 button.innerText = 'Carregar imagem';
 button.className = 'load-button';
-
-container.appendChild(input);
 container.appendChild(button);
 
-// Dropdown de forma (círculo/quadrado)
+// Dropdown de forma
 const shapeLabel = document.createElement('label');
 shapeLabel.innerText = 'Forma:';
-shapeLabel.className = 'dropdown-label';
+shapeLabel.className = 'slider-label';
 
 const shapeSelect = document.createElement('select');
 shapeSelect.className = 'dropdown-select';
-['circle', 'square'].forEach((optionValue) => {
-  const option = document.createElement('option');
-  option.value = optionValue;
-  option.innerText = optionValue === 'circle' ? 'Círculo' : 'Quadrado';
-  shapeSelect.appendChild(option);
+['circle', 'square'].forEach((s) => {
+  const opt = document.createElement('option');
+  opt.value = s;
+  opt.innerText = s === 'circle' ? 'Círculo' : 'Quadrado';
+  shapeSelect.appendChild(opt);
 });
 shapeSelect.addEventListener('change', () => {
   shape = shapeSelect.value;
   if (manager) manager.render();
 });
-
 container.appendChild(shapeLabel);
 container.appendChild(shapeSelect);
 
-// Função utilitária para criar slider com input numérico
-function createSlider(labelText, min, max, value, onInput) {
+// Função para criar sliders com input numérico
+function createSlider(labelText, min, max, value, onChange) {
   const wrapper = document.createElement('div');
   wrapper.className = 'slider-wrapper';
 
@@ -96,18 +82,16 @@ function createSlider(labelText, min, max, value, onInput) {
   numberInput.type = 'number';
   numberInput.min = min;
   numberInput.max = max;
-  numberInput.step = 1;
   numberInput.value = value;
   numberInput.className = 'number-input';
 
   slider.addEventListener('input', () => {
     numberInput.value = slider.value;
-    onInput(parseInt(slider.value));
+    onChange(parseInt(slider.value));
   });
-
   numberInput.addEventListener('input', () => {
     slider.value = numberInput.value;
-    onInput(parseInt(numberInput.value));
+    onChange(parseInt(numberInput.value));
   });
 
   wrapper.appendChild(label);
@@ -116,24 +100,25 @@ function createSlider(labelText, min, max, value, onInput) {
   container.appendChild(wrapper);
 }
 
-// Sliders de cell e radius
-createSlider('Tamanho da célula:', 4, 50, cell, (val) => {
+// Sliders
+createSlider('Tamanho da célula:', 1, 50, cell, (val) => {
   cell = val;
   if (manager) manager.render();
 });
 
-createSlider('Raio dos círculos:', 1, 50, radius, (val) => {
+createSlider('Raio:', 1, 50, radius, (val) => {
   radius = val;
   if (manager) manager.render();
 });
 
-// Inputs de largura e altura do canvas
+createSlider('Fundo (0–255):', 0, 255, bgValue, (val) => {
+  bgValue = val;
+  if (manager) manager.render();
+});
+
+// Tamanho do canvas
 const canvasSizeWrapper = document.createElement('div');
 canvasSizeWrapper.className = 'slider-wrapper';
-
-const widthLabel = document.createElement('label');
-widthLabel.innerText = 'Largura (px):';
-widthLabel.className = 'slider-label';
 
 const widthInput = document.createElement('input');
 widthInput.type = 'number';
@@ -142,10 +127,6 @@ widthInput.min = 100;
 widthInput.max = 4000;
 widthInput.className = 'number-input';
 
-const heightLabel = document.createElement('label');
-heightLabel.innerText = 'Altura (px):';
-heightLabel.className = 'slider-label';
-
 const heightInput = document.createElement('input');
 heightInput.type = 'number';
 heightInput.value = canvasHeight;
@@ -153,29 +134,25 @@ heightInput.min = 100;
 heightInput.max = 4000;
 heightInput.className = 'number-input';
 
-canvasSizeWrapper.appendChild(widthLabel);
+widthInput.addEventListener('change', () => updateCanvasSize());
+heightInput.addEventListener('change', () => updateCanvasSize());
+
+canvasSizeWrapper.appendChild(document.createTextNode('Largura:'));
 canvasSizeWrapper.appendChild(widthInput);
-canvasSizeWrapper.appendChild(heightLabel);
+canvasSizeWrapper.appendChild(document.createTextNode('Altura:'));
 canvasSizeWrapper.appendChild(heightInput);
 container.appendChild(canvasSizeWrapper);
 
 function updateCanvasSize() {
-  const w = parseInt(widthInput.value);
-  const h = parseInt(heightInput.value);
-  if (!isNaN(w) && !isNaN(h)) {
-    settings.dimensions = [w, h];
-    canvasWidth = w;
-    canvasHeight = h;
-    if (loadedImage) startSketchWithImage(input.value.trim());
-  }
+  canvasWidth = parseInt(widthInput.value);
+  canvasHeight = parseInt(heightInput.value);
+  settings.dimensions = [canvasWidth, canvasHeight];
+  if (loadedImage) startSketchWithImage(input.value.trim());
 }
-
-widthInput.addEventListener('change', updateCanvasSize);
-heightInput.addEventListener('change', updateCanvasSize);
 
 document.body.appendChild(container);
 
-// Função para carregar imagem
+// Carrega imagem
 const loadImage = (url) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -186,14 +163,12 @@ const loadImage = (url) => {
   });
 };
 
-// Função para iniciar o sketch
-const startSketchWithImage = async (imageURL) => {
-  loadedImage = await loadImage(imageURL);
+// Sketch
+const startSketchWithImage = async (url) => {
+  loadedImage = await loadImage(url);
 
   const sketch = () => {
     return ({ context, width, height }) => {
-      if (!loadedImage) return;
-
       const cols = Math.floor(width / cell);
       const rows = Math.floor(height / cell);
       const numCells = cols * rows;
@@ -204,7 +179,7 @@ const startSketchWithImage = async (imageURL) => {
       typeContext.drawImage(loadedImage, 0, 0, cols, rows);
       const typeData = typeContext.getImageData(0, 0, cols, rows).data;
 
-      context.fillStyle = 'white';
+      context.fillStyle = `rgb(${bgValue}, ${bgValue}, ${bgValue})`;
       context.fillRect(0, 0, width, height);
 
       for (let i = 0; i < numCells; i++) {
@@ -218,7 +193,6 @@ const startSketchWithImage = async (imageURL) => {
         const b = typeData[i * 4 + 2];
 
         context.fillStyle = `rgb(${r}, ${g}, ${b})`;
-
         context.save();
         context.translate(x + cell * 0.5, y + cell * 0.5);
 
@@ -236,26 +210,19 @@ const startSketchWithImage = async (imageURL) => {
     };
   };
 
-  // remove canvas antigo antes de criar outro
-  if (manager && manager.unmount) {
-    manager.unmount();
-  }
-
-  manager = await canvasSketch(sketch, settings);
+  if (manager) await manager.unmount?.();
+  manager = await canvasSketch(sketch, {
+    ...settings,
+    styleCanvas: (canvas) => canvas.classList.add('canvas-output')
+  });
 };
 
-// Ação do botão
+// Botão
 button.addEventListener('click', async () => {
   const url = input.value.trim();
-  if (!url) {
-    alert('Por favor, insira uma URL de imagem válida.');
-    return;
-  }
-
-  try {
+  if (url) {
     await startSketchWithImage(url);
-  } catch (err) {
-    alert('Erro ao carregar imagem.');
-    console.error(err);
+  } else {
+    alert('Insira uma URL de imagem válida.');
   }
 });
