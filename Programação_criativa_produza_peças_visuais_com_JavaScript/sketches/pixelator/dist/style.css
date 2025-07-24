@@ -1,113 +1,59 @@
 body {
     margin: 0;
+    padding: 0;
     font-family: sans-serif;
-    background-color: #f0f0f0;
+    background: #fff;
 }
 
 .input-container {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
     gap: 12px;
-    padding: 12px 20px;
+    padding: 20px;
+    margin-bottom: 50px;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 10;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    box-sizing: border-box;
-}
-
-/* Agrupamento de controles */
-.slider-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    min-width: 160px;
-    gap: 4px;
-}
-
-.slider-label {
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 2px;
-    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .image-input,
 .number-input,
 .slider-input,
 .dropdown-select {
-    padding: 6px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+    padding: 5px 10px;
     font-size: 14px;
-    box-sizing: border-box;
-}
-
-.image-input {
-    flex: 1;
-    min-width: 200px;
+    max-width: 100px;
 }
 
 .load-button {
-    padding: 6px 12px;
+    padding: 5px 15px;
     font-size: 14px;
-    border: none;
-    border-radius: 6px;
-    background-color: #007bff;
-    color: white;
     cursor: pointer;
-    white-space: nowrap;
 }
 
-.load-button:hover {
-    background-color: #0056b3;
+.slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.number-input {
-    width: 60px;
-}
-
-.slider-input {
-    width: 150px;
-}
-
-.dropdown-label {
+.slider-label {
     font-size: 14px;
-    font-weight: 500;
+    margin-right: 4px;
 }
 
-.dropdown-select {
-    font-size: 14px;
-    padding: 4px 6px;
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-    .input-container {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 16px;
-    }
-
-    .slider-wrapper {
-        width: 100%;
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .slider-input {
-        width: 100%;
-    }
-
-    .number-input {
-        width: 100%;
-    }
-
-    .image-input {
-        width: 100%;
-    }
+canvas {
+    display: block;
+    margin: 300px auto 40px auto;
+    /* espaço para o painel no topo */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 95%;
+    height: auto;
 }

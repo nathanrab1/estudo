@@ -101,7 +101,7 @@ function createSlider(labelText, min, max, value, onChange) {
 }
 
 // Sliders
-createSlider('Tamanho da célula:', 1, 50, cell, (val) => {
+createSlider('Tamanho da célula:', 4, 50, cell, (val) => {
   cell = val;
   if (manager) manager.render();
 });
