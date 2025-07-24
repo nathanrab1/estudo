@@ -1,31 +1,51 @@
-const canvasSketch = require('canvas-sketch');
+import canvasSketch from 'canvas-sketch';
 
+// ----- Adiciona o CSS externo dinamicamente -----
+const link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = './style.css';
+document.head.appendChild(link);
+
+// ----- Cria input de URL e botão -----
+const container = document.createElement('div');
+container.className = 'input-container';
+
+const input = document.createElement('input');
+input.type = 'text';
+input.placeholder = 'Cole a URL da imagem aqui...';
+input.className = 'image-input';
+
+const button = document.createElement('button');
+button.innerText = 'Carregar imagem';
+button.className = 'load-button';
+
+container.appendChild(input);
+container.appendChild(button);
+document.body.appendChild(container);
+
+// ----- Canvas-sketch settings -----
 const settings = {
   dimensions: [1080, 1080]
 };
 
-const cell = 20;
-const radius = 10;
-
+const cell = 10;
 const typeCanvas = document.createElement('canvas');
 const typeContext = typeCanvas.getContext('2d');
 
-const imageURL = 'https://http2.mlstatic.com/D_NQ_NP_744079-MLB50654783292_072022-O-the-beatles-vinil-the-beatles-magical-mystery-tour-2009-r.webp'; // Você pode mudar essa URL
+let manager;
 
-let image; // será carregada antes do sketch
-
-function loadImage(url) {
+const loadImage = (url) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'Anonymous'; // evita erros CORS
+    img.crossOrigin = 'Anonymous';
     img.onload = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = () => reject(new Error('Erro ao carregar imagem'));
     img.src = url;
   });
-}
+};
 
-const start = async () => {
-  image = await loadImage(imageURL);
+const startSketchWithImage = async (imageURL) => {
+  const image = await loadImage(imageURL);
 
   const sketch = ({ width, height }) => {
     const cols = Math.floor(width / cell);
@@ -35,9 +55,7 @@ const start = async () => {
     typeCanvas.width = cols;
     typeCanvas.height = rows;
 
-    // Desenha a imagem no canvas auxiliar redimensionado
     typeContext.drawImage(image, 0, 0, cols, rows);
-
     const typeData = typeContext.getImageData(0, 0, cols, rows).data;
 
     return ({ context }) => {
@@ -54,7 +72,10 @@ const start = async () => {
         const r = typeData[i * 4 + 0];
         const g = typeData[i * 4 + 1];
         const b = typeData[i * 4 + 2];
+        const a = typeData[i * 4 + 3];
 
+        const brightness = (r + g + b) / 3;
+        const radius = (brightness / 255) * (cell * 0.5);
 
         context.fillStyle = `rgb(${r}, ${g}, ${b})`;
 
@@ -68,7 +89,16 @@ const start = async () => {
     };
   };
 
-  await canvasSketch(sketch, settings);
+  if (manager) await manager.dispose();
+  manager = await canvasSketch(sketch, settings);
 };
 
-start();
+// ----- Botão carrega imagem e inicia canvas-sketch -----
+button.addEventListener('click', () => {
+  const url = input.value.trim();
+  if (url) {
+    startSketchWithImage(url);
+  } else {
+    alert('Por favor, insira uma URL válida de imagem.');
+  }
+});
