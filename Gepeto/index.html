@@ -6,10 +6,25 @@
 <style>
   body { background: #222; color: #eee; text-align: center; font-family: sans-serif; }
   canvas { background: #111; display: block; margin: 12px auto; border: 1px solid #333; }
+  .controls { margin: 10px; }
+  .controls label { margin: 0 10px; }
 </style>
 </head>
 <body>
 <h2>Engrenagens com dentes (linhas radiais) - Gear2 8px à direita</h2>
+
+<div class="controls">
+  <label>Velocidade:
+    <input type="range" id="speedSlider" min="-5" max="5" step="0.1" value="1">
+  </label>
+  <label>Raio Gear 1:
+    <input type="range" id="gear1Slider" min="1" max="5" step="0.1" value="3">
+  </label>
+  <label>Raio Gear 2:
+    <input type="range" id="gear2Slider" min="0.5" max="3" step="0.1" value="1">
+  </label>
+</div>
+
 <canvas id="canvas" width="600" height="400"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/planck-js@latest/dist/planck.min.js"></script>
@@ -17,50 +32,46 @@
 const pl = planck;
 const scale = 40; // 1 metro = 40 px
 
-// Parâmetros
-const gear1Radius = 1.5;
-const gear2Radius = 1.0;
+// Variáveis globais controladas pelos sliders
+let gear1Radius = 3;
+let gear2Radius = 1.0;
+let motorSpeed = 1.0;
 const teeth1 = 20;
 const teeth2 = 14;
-const motorSpeed = 1.0;
-
-// Distância entre centros (somando os raios)
-const centerDistance = gear1Radius + gear2Radius;
-
-// Extra deslocamento 8px → metros
-const extraOffset = 8 / scale;
 
 // Mundo
-const world = new pl.World({gravity: pl.Vec2(0,0)});
-
-// Função para criar engrenagem
-function createGear(x, y, r) {
-  const body = world.createBody({ type:'dynamic', position: pl.Vec2(x,y) });
-  body.createFixture(pl.Circle(r), { density: 1.0, friction: 0.3 });
-  return body;
-}
-
-// Posições iniciais
+let world, gear1, gear2, joint1, joint2;
+const ctx = document.getElementById('canvas').getContext('2d');
 const baseX = 5.0, baseY = 5.0;
 
-// Criar engrenagens
-const gear1 = createGear(baseX, baseY, gear1Radius);
-// Gear2 deslocada 8px à direita antes de criar joint
-const gear2 = createGear(baseX + centerDistance + extraOffset, baseY, gear2Radius);
+// Função para recriar o mundo e engrenagens
+function initWorld() {
+  world = new pl.World({gravity: pl.Vec2(0,0)});
+  const ground = world.createBody();
 
-// Juntas revolutas
-const ground = world.createBody();
-const joint1 = world.createJoint(pl.RevoluteJoint(
-  { enableMotor: true, motorSpeed: motorSpeed, maxMotorTorque: 2000 },
-  ground, gear1, gear1.getPosition()
-));
-const joint2 = world.createJoint(pl.RevoluteJoint({}, ground, gear2, gear2.getPosition()));
+  // Distância entre centros (somando raios)
+  const centerDistance = gear1Radius + gear2Radius;
+  const extraOffset = 8 / scale;
 
-// GearJoint (sinal negativo → sentido oposto)
-world.createJoint(pl.GearJoint({}, gear1, gear2, joint1, joint2, 1/1.5));
+  // Criar engrenagens
+  gear1 = world.createBody({ type:'dynamic', position: pl.Vec2(baseX, baseY) });
+  gear1.createFixture(pl.Circle(gear1Radius), { density: 1.0, friction: 0.3 });
 
-// Desenhar engrenagens com dentes radiais
-const ctx = document.getElementById('canvas').getContext('2d');
+  gear2 = world.createBody({ type:'dynamic', position: pl.Vec2(baseX + centerDistance + extraOffset, baseY) });
+  gear2.createFixture(pl.Circle(gear2Radius), { density: 1.0, friction: 0.3 });
+
+  // Juntas
+  joint1 = world.createJoint(pl.RevoluteJoint(
+    { enableMotor: true, motorSpeed: motorSpeed, maxMotorTorque: 2000 },
+    ground, gear1, gear1.getPosition()
+  ));
+  joint2 = world.createJoint(pl.RevoluteJoint({}, ground, gear2, gear2.getPosition()));
+
+  // Relação de engrenagens (sentido oposto)
+  world.createJoint(pl.GearJoint({}, gear1, gear2, joint1, joint2, gear2Radius/gear1Radius));
+}
+
+// Função para desenhar uma engrenagem
 function drawGear(x, y, r, angle, teeth, color) {
   ctx.save();
   ctx.translate(x, y);
@@ -78,7 +89,7 @@ function drawGear(x, y, r, angle, teeth, color) {
     const a = (i/teeth)*Math.PI*2;
     const x1 = Math.cos(a)*r;
     const y1 = Math.sin(a)*r;
-    const x2 = Math.cos(a)*(r+8); // tamanho do dente 8px
+    const x2 = Math.cos(a)*(r+8);
     const y2 = Math.sin(a)*(r+8);
     ctx.beginPath();
     ctx.moveTo(x1,y1);
@@ -105,6 +116,23 @@ function update() {
   draw();
   requestAnimationFrame(update);
 }
+
+// Sliders
+document.getElementById('speedSlider').addEventListener('input', e => {
+  motorSpeed = parseFloat(e.target.value);
+  joint1.setMotorSpeed(motorSpeed);
+});
+document.getElementById('gear1Slider').addEventListener('input', e => {
+  gear1Radius = parseFloat(e.target.value);
+  initWorld();
+});
+document.getElementById('gear2Slider').addEventListener('input', e => {
+  gear2Radius = parseFloat(e.target.value);
+  initWorld();
+});
+
+// Inicialização
+initWorld();
 update();
 </script>
 </body>
