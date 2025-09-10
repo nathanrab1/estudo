@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Engrenagens Planck.js - linhas radiais</title>
+<style>
+  body { background: #222; color: #eee; text-align: center; font-family: sans-serif; }
+  canvas { background: #111; display: block; margin: 12px auto; border: 1px solid #333; }
+</style>
+</head>
+<body>
+<h2>Engrenagens com dentes (linhas radiais) - Gear2 8px à direita</h2>
+<canvas id="canvas" width="600" height="400"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/planck-js@latest/dist/planck.min.js"></script>
+<script>
+const pl = planck;
+const scale = 40; // 1 metro = 40 px
+
+// Parâmetros
+const gear1Radius = 1.5;
+const gear2Radius = 1.0;
+const teeth1 = 20;
+const teeth2 = 14;
+const motorSpeed = 1.0;
+
+// Distância entre centros (somando os raios)
+const centerDistance = gear1Radius + gear2Radius;
+
+// Extra deslocamento 8px → metros
+const extraOffset = 8 / scale;
+
+// Mundo
+const world = new pl.World({gravity: pl.Vec2(0,0)});
+
+// Função para criar engrenagem
+function createGear(x, y, r) {
+  const body = world.createBody({ type:'dynamic', position: pl.Vec2(x,y) });
+  body.createFixture(pl.Circle(r), { density: 1.0, friction: 0.3 });
+  return body;
+}
+
+// Posições iniciais
+const baseX = 5.0, baseY = 5.0;
+
+// Criar engrenagens
+const gear1 = createGear(baseX, baseY, gear1Radius);
+// Gear2 deslocada 8px à direita antes de criar joint
+const gear2 = createGear(baseX + centerDistance + extraOffset, baseY, gear2Radius);
+
+// Juntas revolutas
+const ground = world.createBody();
+const joint1 = world.createJoint(pl.RevoluteJoint(
+  { enableMotor: true, motorSpeed: motorSpeed, maxMotorTorque: 2000 },
+  ground, gear1, gear1.getPosition()
+));
+const joint2 = world.createJoint(pl.RevoluteJoint({}, ground, gear2, gear2.getPosition()));
+
+// GearJoint (sinal negativo → sentido oposto)
+world.createJoint(pl.GearJoint({}, gear1, gear2, joint1, joint2, 1/1.5));
+
+// Desenhar engrenagens com dentes radiais
+const ctx = document.getElementById('canvas').getContext('2d');
+function drawGear(x, y, r, angle, teeth, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+
+  // círculo externo
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.stroke();
+
+  // dentes (linhas radiais)
+  for(let i=0;i<teeth;i++){
+    const a = (i/teeth)*Math.PI*2;
+    const x1 = Math.cos(a)*r;
+    const y1 = Math.sin(a)*r;
+    const x2 = Math.cos(a)*(r+8); // tamanho do dente 8px
+    const y2 = Math.sin(a)*(r+8);
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// Loop de simulação
+function draw() {
+  ctx.clearRect(0,0,600,400);
+
+  const pos1 = gear1.getPosition();
+  const pos2 = gear2.getPosition();
+
+  drawGear(pos1.x*scale, pos1.y*scale, gear1Radius*scale, gear1.getAngle(), teeth1, '#0f0');
+  drawGear(pos2.x*scale, pos2.y*scale, gear2Radius*scale, gear2.getAngle(), teeth2, '#0ff');
+}
+
+function update() {
+  world.step(1/60);
+  draw();
+  requestAnimationFrame(update);
+}
+update();
+</script>
+</body>
+</html>
