@@ -102,23 +102,10 @@
         </div>
         <span id="toolRampCount" class="chip">x4</span>
       </div>
-
-      <!-- NOVO: ferramenta Gangorra -->
-      <div id="toolSeesaw" class="tool" title="Arraste para o campo">
-        <div style="display:flex;align-items:center;gap:.55rem;">
-          <svg width="46" height="28" viewBox="0 0 46 28" aria-hidden="true">
-            <rect x="5" y="12" width="36" height="6" fill="#a8d1f1" stroke="#8a5a3b" stroke-width="2" rx="3" />
-            <circle cx="23" cy="22" r="4" fill="#fff" stroke="#8a5a3b" stroke-width="2"/>
-          </svg>
-          <b>Gangorra</b>
-        </div>
-        <span id="toolSeesawCount" class="chip">x2</span>
-      </div>
-
       <p class="muted" style="margin:.2rem 0 0">
-        • Arraste os itens da <b>Toolbox</b> para o campo.<br>
+        • Arraste a <b>Rampa</b> da Toolbox para o campo.<br>
         • Clique para <b>selecionar</b>; gire com <kbd>Q</kbd>/<kbd>E</kbd>; arraste para reposicionar.<br>
-        • <b>Play</b> inicia a simulação; <b>Reset</b> recomeça (mantém peças).
+        • <b>Play</b> inicia a simulação; <b>Reset</b> recomeça (mantém rampas).
       </p>
     </aside>
 
@@ -133,12 +120,12 @@
       <h3 style="margin:.1rem 0 .4rem">Objetivo</h3>
       <p class="muted">
         Faça a <span class="badge">Bola</span> cair dentro do <span class="badge">Balde</span> usando as
-        <span class="badge">Rampas</span> e <span class="badge">Gangorras</span>.
+        <span class="badge">Rampas</span>.
       </p>
       <ol class="muted" style="margin:.4rem 0 .6rem; padding-left:1.1rem;">
-        <li>Arraste peças da <b>Toolbox</b>.</li>
-        <li>Selecione e gire com <b>Q/E</b>; arraste para ajustar.</li>
-        <li><b>Play</b> para testar. <b>Reset</b> recomeça (mantém peças).</li>
+        <li>Arraste rampas da <b>Toolbox</b> (você tem 4).</li>
+        <li>Clique na rampa para <b>selecionar</b>; gire com <b>Q/E</b>; arraste para ajustar.</li>
+        <li>Clique <b>Play</b> para testar. Use <b>Reset</b> para tentar de novo (mantém rampas).</li>
       </ol>
       <hr style="border:none;border-top:1px dashed #b98a6b; margin:.5rem 0;">
       <div class="muted">Tentativas: <span id="tries">0</span> • Tempo: <span id="time">0.0s</span></div>
@@ -149,9 +136,15 @@
   <footer>Colagem/giz: laranja, turquoise, marrom • Tipografia: Lora • Física: Matter.js (Canvas 2D)</footer>
 
 <script>
-/* ========= Level 0 — Tutorial + Gangorra na toolbox ========= */
+/* ========= Level 0 — Tutorial =========
+   - No initial ramp; toolbox x2
+   - Select & drag ramps on canvas; rotate with Q/E
+   - Editing mode vs Playing mode
+   - Reset keeps ramps; only ball/time reset
+   Comments in English for clarity.
+=================================================== */
 
-const { Engine, World, Bodies, Body, Events, Mouse, Query, Constraint } = Matter;
+const { Engine, World, Bodies, Body, Events, Mouse, MouseConstraint, Query } = Matter;
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -165,8 +158,6 @@ const triesEl = document.getElementById('tries');
 const timeEl  = document.getElementById('time');
 const toolRamp = document.getElementById('toolRamp');
 const toolRampCountEl = document.getElementById('toolRampCount');
-const toolSeesaw = document.getElementById('toolSeesaw');
-const toolSeesawCountEl = document.getElementById('toolSeesawCount');
 
 // Assets
 const imgBucket = new Image(); imgBucket.src = 'bucket.png';
@@ -178,22 +169,17 @@ let tries = 0, levelStartTime = 0, timerInterval = null;
 
 // Bodies
 let ball, bucketWalls=[], goalSensor;
-let ramps = [];            // static while editing
-let seesaws = [];          // {pivot, plank, constraint, w, h}
-let selected = null;       // selected body or seesaw object
-let selectedKind = null;   // 'ramp' | 'seesaw'
+let ramps = [];            // placed ramps (static)
+let selected = null;       // selected ramp body
 
 // Toolbox count
 let rampCount = 4;
-let seesawCount = 2;
 
-// Dragging inside canvas
+// Dragging inside canvas (for static ramps)
 let isDragging = false;
 let dragOffset = {x:0,y:0};
 
-// Placing state (union)
-let placing = null; // {type:'ramp', body} | {type:'seesaw', pivot, plank, w, h}
-
+// Constants
 const toRad = d => d*Math.PI/180;
 const toDeg = r => r*180/Math.PI;
 
@@ -239,20 +225,27 @@ function setup(){
       });
     }
   });
+  Events.on(engine,'collisionEnd', e=>{
+    e.pairs.forEach(p=>{
+      const a=p.bodyA,b=p.bodyB;
+      if((a===ball && b===goalSensor) || (b===ball && a===goalSensor)){
+        // left sensor region; timer will naturally reset via logic above
+      }
+    });
+  });
 
-  // Mouse (coords)
+  // Mouse (for hit testing coordinates)
   const mouse = Mouse.create(canvas);
   mouse.pixelRatio = window.devicePixelRatio||1;
 
-  // Events
+  // Canvas events (custom drag/select)
   canvas.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('keydown', onKeyRotate);
 
   // Toolbox
-  toolRamp.addEventListener('pointerdown', startPlacingRamp);
-  toolSeesaw.addEventListener('pointerdown', startPlacingSeesaw);
+  toolRamp.addEventListener('pointerdown', startPlacingFromTool);
 
   // Start loop & timer
   levelStartTime = performance.now();
@@ -268,161 +261,82 @@ function updateTimer(reset=false){
   },100);
 }
 
-// ===== Toolbox: Rampa =====
-function startPlacingRamp(ev){
+// ===== Toolbox: create ramp on drag start =====
+let placing = null;
+function startPlacingFromTool(ev){
   if(rampCount<=0 || !editing) return;
   const pos = screenToWorld(ev.clientX, ev.clientY);
-  const body = Bodies.rectangle(pos.x, pos.y, 180, 16, {
+  placing = Bodies.rectangle(pos.x, pos.y, 180, 16, {
     isStatic:true, angle: toRad(-20), friction:.5, label:'piece_ramp', render:{visible:false}
   });
-  World.add(world, body);
-  placing = { type:'ramp', body, w:180, h:16 };
+  World.add(world, placing);
   toolRamp.style.opacity=.45;
   ev.preventDefault();
 }
-
-// ===== Toolbox: Gangorra =====
-function startPlacingSeesaw(ev){
-  if(seesawCount<=0 || !editing) return;
-  const pos = screenToWorld(ev.clientX, ev.clientY);
-  const w=200, h=16;
-  const pivot = Bodies.circle(pos.x, pos.y, 5, { isStatic:true, label:'pivot', render:{visible:false} });
-  const plank = Bodies.rectangle(pos.x, pos.y, w, h, {
-    isStatic:true, // estático enquanto edita
-    friction:0.1, restitution:0.2, label:'seesaw_plank'
-  });
-  World.add(world, [pivot, plank]);
-  placing = { type:'seesaw', pivot, plank, w, h };
-  toolSeesaw.style.opacity=.45;
-  ev.preventDefault();
-}
-
-// ===== Pointer move during placing =====
 window.addEventListener('pointermove', (ev)=>{
-  if(!placing) return;
-  const pos = screenToWorld(ev.clientX, ev.clientY);
-  if(placing.type==='ramp'){
-    Body.setPosition(placing.body, pos);
-  }else if(placing.type==='seesaw'){
-    Body.setPosition(placing.pivot, pos);
-    Body.setPosition(placing.plank, pos);
+  if(placing){
+    const pos = screenToWorld(ev.clientX, ev.clientY);
+    Body.setPosition(placing, pos);
   }
 });
-
-// ===== Pointer up: drop piece =====
 window.addEventListener('pointerup', (ev)=>{
-  if(!placing) return;
-  const r = canvas.getBoundingClientRect();
-  const inside = (ev.clientX>=r.left && ev.clientX<=r.right && ev.clientY>=r.top && ev.clientY<=r.bottom);
-
-  if(!inside){
-    // cancel
-    if(placing.type==='ramp'){
-      World.remove(world, placing.body);
-      toolRamp.style.opacity=1;
-    }else{
-      World.remove(world, placing.plank);
-      World.remove(world, placing.pivot);
-      toolSeesaw.style.opacity=1;
+  if (placing){
+    const r = canvas.getBoundingClientRect();
+    if (ev.clientX>=r.left && ev.clientX<=r.right && ev.clientY>=r.top && ev.clientY<=r.bottom){
+      ramps.push(placing);
+      selected = placing;
+      placing = null;
+      rampCount--; toolRampCountEl.textContent = 'x'+rampCount;
+      if (rampCount<=0){ toolRamp.style.opacity=.5; toolRamp.style.pointerEvents='none'; }
+    } else {
+      Matter.World.remove(world, placing);
+      placing=null; toolRamp.style.opacity=1;
     }
-    placing=null; return;
   }
-
-  if(placing.type==='ramp'){
-    ramps.push(placing.body);
-    selected = placing.body; selectedKind='ramp';
-    rampCount--; toolRampCountEl.textContent='x'+rampCount;
-    if(rampCount<=0){ toolRamp.style.opacity=.5; toolRamp.style.pointerEvents='none'; } else { toolRamp.style.opacity=1; }
-  }else{
-    // criar constraint agora e guardar como seesaw
-   const nonCollideGroup = Matter.Body.nextGroup(true);
-placing.pivot.collisionFilter.group = nonCollideGroup;
-placing.plank.collisionFilter.group = nonCollideGroup;
-
-// hinge "duro" no ponto, mas sem mola/atrito angular
-const revolute = Constraint.create({
-  bodyA: placing.plank, pointA: { x: 0, y: 0 },
-  bodyB: placing.pivot, pointB: { x: 0, y: 0 },
-  length: 0,
-  stiffness: 1,         // mantém o pino firme
-  damping: 0,           // sem amortecimento (nada de mola)
-  angularStiffness: 0   // livre para rodar
 });
-World.add(world, revolute);
-    seesaws.push({ pivot:placing.pivot, plank:placing.plank, constraint:revolute, w:placing.w, h:placing.h });
-    selected = seesaws[seesaws.length-1]; selectedKind='seesaw';
-    seesawCount--; toolSeesawCountEl.textContent='x'+seesawCount;
-    if(seesawCount<=0){ toolSeesaw.style.opacity=.5; toolSeesaw.style.pointerEvents='none'; } else { toolSeesaw.style.opacity=1; }
-  }
-  placing=null;
-});
+
 
 // ===== Selection & drag inside canvas =====
 function onPointerDown(ev){
   if(!editing) return;
   const p = screenToWorld(ev.clientX, ev.clientY);
-
-  // Tenta pegar rampas (mais recente por último)
-  const hitsRamp = Query.point(ramps, p);
-  if(hitsRamp.length){
-    selected = hitsRamp[hitsRamp.length-1];
-    selectedKind='ramp';
+  // Hit test ramps (check nearest first by simple reverse order)
+  const hits = Query.point(ramps, p);
+  if(hits.length){
+    // choose top-most by last in ramps (simple heuristic)
+    let picked = hits[hits.length-1];
+    selected = picked;
+    // start drag
     isDragging = true;
     dragOffset.x = p.x - selected.position.x;
     dragOffset.y = p.y - selected.position.y;
     canvas.style.cursor='grabbing';
-    return;
+  }else{
+    selected = null;
   }
-
-  // Tenta pegar gangorras (planks)
-  const planks = seesaws.map(s=>s.plank);
-  const hitsSeesaw = Query.point(planks, p);
-  if(hitsSeesaw.length){
-    const plank = hitsSeesaw[hitsSeesaw.length-1];
-    selected = seesaws.find(s=>s.plank===plank);
-    selectedKind='seesaw';
-    isDragging = true;
-    dragOffset.x = p.x - selected.plank.position.x;
-    dragOffset.y = p.y - selected.plank.position.y;
-    canvas.style.cursor='grabbing';
-    return;
-  }
-
-  selected=null; selectedKind=null;
 }
-
 function onPointerMove(ev){
-  if(!editing || !isDragging || !selected) return;
-  const p = screenToWorld(ev.clientX, ev.clientY);
-
-  if(selectedKind==='ramp'){
+  if(!editing) return;
+  if(isDragging && selected){
+    const p = screenToWorld(ev.clientX, ev.clientY);
     Body.setPosition(selected, { x: p.x - dragOffset.x, y: p.y - dragOffset.y });
-  }else if(selectedKind==='seesaw'){
-    const target = { x: p.x - dragOffset.x, y: p.y - dragOffset.y };
-    const cur = selected.plank.position;
-    const dx = target.x - cur.x, dy = target.y - cur.y;
-    Body.setPosition(selected.plank, { x: cur.x + dx, y: cur.y + dy });
-    Body.setPosition(selected.pivot, { x: selected.pivot.position.x + dx, y: selected.pivot.position.y + dy });
   }
 }
-
 function onPointerUp(){
   if(!editing) return;
   isDragging=false; canvas.style.cursor='default';
 }
 
-// ===== Rotation (Q/E) =====
+// ===== Rotation (Q/E) only for selected ramp in editing =====
 function onKeyRotate(e){
   if(!editing || !selected) return;
   const k = e.key.toLowerCase();
-  if(k!=='q' && k!=='e') return;
-  const delta = (k==='q' ? -5 : +5);
-  if(selectedKind==='ramp'){
-    Body.setAngle(selected, toRad(toDeg(selected.angle)+delta));
-  }else if(selectedKind==='seesaw'){
-    // Rotaciona apenas a tábua (pivot é ponto fixo)
-    Body.setAngle(selected.plank, toRad(toDeg(selected.plank.angle)+delta));
-  }
+  if(k==='q'){ nudgeRotation(selected,-5); }
+  else if(k==='e'){ nudgeRotation(selected, +5); }
+}
+function nudgeRotation(body, deltaDeg){
+  const rad = toRad(toDeg(body.angle)+deltaDeg);
+  Body.setAngle(body, rad);
 }
 
 // ===== Controls =====
@@ -430,27 +344,15 @@ btnPlay.addEventListener('click', ()=>{
   if(editing){
     editing=false; bannerWin.classList.remove('show');
     tries++; triesEl.textContent=tries;
-    // liberar gangorras para física
-    seesaws.forEach(s=>{
-      Body.setStatic(s.plank, false);
-      Body.setAngularVelocity(s.plank, 0);
-      Body.setVelocity(s.plank, {x:0,y:0});
-    });
   }
 });
 btnReset.addEventListener('click', ()=>{
-  // voltar a editar; reset bola; manter peças
+  // stop playing, reset ball/time; keep ramps
   editing=true; bannerWin.classList.remove('show');
   Body.setPosition(ball, {x:120,y:160});
   Body.setVelocity(ball, {x:0,y:0});
   Body.setAngularVelocity(ball, 0);
   Body.setAngle(ball, 0);
-  // gangorras voltam a estático para edição
-  seesaws.forEach(s=>{
-    Body.setStatic(s.plank, true);
-    Body.setAngularVelocity(s.plank, 0);
-    Body.setVelocity(s.plank, {x:0,y:0});
-  });
   levelStartTime=performance.now(); updateTimer(true);
 });
 btnMenu.addEventListener('click', ()=>alert('Menu (placeholder)'));
@@ -466,10 +368,14 @@ function screenToWorld(cx, cy){
   const r = canvas.getBoundingClientRect();
   const scaleX = canvas.width  / r.width;
   const scaleY = canvas.height / r.height;
-  return { x: (cx - r.left) * scaleX, y: (cy - r.top) * scaleY };
+  return {
+    x: (cx - r.left) * scaleX,
+    y: (cy - r.top)  * scaleY
+  };
 }
 
-// ===== Render loop =====
+
+// ===== Render loop (custom drawing) =====
 function loop(){
   if(!editing){ Matter.Engine.update(engine, 1000/60); }
 
@@ -478,24 +384,10 @@ function loop(){
 
   // ramps
   ramps.forEach(b=>{
-    const isSel = (selectedKind==='ramp' && b===selected);
+    const isSel = (b===selected);
     drawPlank(b.position.x, b.position.y, 180, 16, b.angle, '#f1d9b8', false, isSel);
   });
-
-  // placing ghost
-  if(placing){
-    if(placing.type==='ramp'){
-      drawPlank(placing.body.position.x, placing.body.position.y, placing.w, placing.h, placing.body.angle, 'rgba(241,217,184,.7)', true, false);
-    }else{
-      drawPlank(placing.plank.position.x, placing.plank.position.y, placing.w, placing.h, placing.plank.angle, 'rgba(168,209,241,.7)', true, false);
-    }
-  }
-
-  // seesaws
-  seesaws.forEach(s=>{
-    const isSel = (selectedKind==='seesaw' && selected===s);
-    drawPlank(s.plank.position.x, s.plank.position.y, s.w, s.h, s.plank.angle, '#a8d1f1', false, isSel);
-  });
+  if(placing){ drawPlank(placing.position.x, placing.position.y, 180, 16, placing.angle, 'rgba(241,217,184,.7)', true, false); }
 
   // ball
   drawBall(ball.position.x, ball.position.y, 20);
