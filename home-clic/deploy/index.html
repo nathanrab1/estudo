@@ -37,6 +37,50 @@
   p { margin: 0; }
   @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
   @keyframes floaty2 { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(12px) rotate(-4deg); } }
+
+  /* ---- Tablet ---- */
+  @media (max-width: 1023px) {
+    [style*="repeat(3,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
+    #topo h1 { font-size: 52px !important; }
+  }
+
+  /* ---- Mobile ---- */
+  @media (max-width: 680px) {
+    #topo { padding: 48px 0 40px !important; }
+    #topo > div { max-width: none !important; }
+    #topo h1 { font-size: 34px !important; margin-bottom: 18px !important; }
+    #topo [style*="font-size:21px"] { font-size: 17px !important; margin-bottom: 28px !important; }
+    #topo a { font-size: 16px !important; padding: 13px 24px !important; }
+
+    section h2 { font-size: 27px !important; width: auto !important; height: auto !important; }
+    section h3 { font-size: 20px !important; }
+
+    #sobre { padding: 24px 0 40px !important; }
+    #sobre > div { padding: 30px 24px !important; gap: 24px !important; }
+    #sobre p { font-size: 20px !important; }
+
+    /* stack every 3-col grid */
+    [style*="repeat(3,1fr)"] { grid-template-columns: 1fr !important; gap: 20px !important; }
+
+    /* pillar cards: icon on top, text below */
+    [style*="gap:40px; align-items:flex-start"] { flex-direction: column !important; gap: 20px !important; padding: 28px 24px !important; }
+    [style*="width:168px; height:168px"] { width: 128px !important; height: 128px !important; }
+    [style*="width:168px; height:168px"] > svg { width: 128px !important; }
+    #pilares p, #pilares .p { font-size: 16px !important; }
+
+    /* "aprender construindo" band */
+    [style*="padding:96px 40px"] { padding: 56px 24px !important; }
+    [style*="font-size: 52px"] { font-size: 30px !important; }
+    [style*="font-size:22px; line-height:1.55"] { font-size: 18px !important; }
+
+    /* CTA */
+    #contato { padding: 48px 0 24px !important; }
+    #contato > div { padding: 44px 26px !important; }
+
+    /* section vertical rhythm */
+    #pilares, #porque, #apps { padding: 48px 0 24px !important; }
+    #pilares > div:first-child, #porque > div:first-child, #apps > div:first-child { margin-bottom: 32px !important; }
+  }
 </style>
 </helmet>
 
